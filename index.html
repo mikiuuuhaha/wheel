@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>自定义转盘 · 桌面版</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(145deg, #1e2b3a 0%, #0f172a 100%);
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+    .app {
+      display: flex;
+      gap: 30px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1400px;
+      width: 100%;
+    }
+    /* 左侧编辑面板 */
+    .editor-panel {
+      background: rgba(22, 32, 48, 0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 32px;
+      padding: 24px;
+      box-shadow: 0 25px 40px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      width: 380px;
+      color: #e0e7ff;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 90vh;
+    }
+    .editor-panel h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #ffd966;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .editor-panel h2 small {
+      font-size: 13px;
+      color: #9aa8b9;
+      font-weight: 400;
+      letter-spacing: 0;
+      margin-left: auto;
+    }
+    .segment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      padding-right: 6px;
+      flex: 1;
+      min-height: 200px;
+      max-height: 480px;
+    }
+    .segment-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .segment-list::-webkit-scrollbar-thumb {
+      background: #3e4d5e;
+      border-radius: 10px;
+    }
+    .segment-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: #1f2a3a;
+      padding: 8px 12px;
+      border-radius: 40px;
+      border: 1px solid #2e3b4e;
+      transition: border-color 0.2s;
+      flex-shrink: 0;
+    }
+    .segment-item:focus-within {
+      border-color: #ffd966;
+    }
+    .segment-item input[type="text"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f0f4fa;
+      font-size: 15px;
+      font-weight: 500;
+      padding: 6px 0;
+      font-family: inherit;
+      letter-spacing: 0.3px;
+      min-width: 0;
+    }
+    .segment-item input[type="text"]::placeholder {
+      color: #5c6e85;
+      font-weight: 400;
+    }
+    .color-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid #ffffff30;
+      box-shadow: 0 2px 6px #00000050;
+      cursor: pointer;
+      transition: transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .color-badge:hover {
+      transform: scale(1.15);
+    }
+    /* 隐藏原生颜色输入框 */
+    .color-input-hidden {
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+    }
+    .remove-btn {
+      background: #3a2a2a;
+      border: none;
+      color: #e59898;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .remove-btn:hover {
+      background: #5e3535;
+      color: #ffb3b3;
+      transform: scale(1.1);
+    }
+    .editor-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .btn {
+      flex: 1;
+      background: #2e3b4e;
+      border: none;
+      border-radius: 40px;
+      padding: 12px 16px;
+      color: #e0e7ff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      border: 1px solid #3e5068;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: #3b4b63;
+      border-color: #5d7a9b;
+      color: #fff;
+    }
+    .btn.primary {
+      background: #f1c40f;
+      color: #1a1f2b;
+      border-color: #f1c40f;
+      font-weight: 700;
+    }
+    .btn.primary:hover {
+      background: #f5d742;
+      border-color: #f5d742;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    .global-color-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 8px 0;
+      border-top: 1px solid #2e3b4e;
+      border-bottom: 1px solid #2e3b4e;
+      margin: 4px 0;
+      flex-shrink: 0;
+    }
+    .global-color-row label {
+      font-size: 13px;
+      color: #9aa8b9;
+      font-weight: 500;
+    }
+    .global-color-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 2px solid #ffffff30;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 2px 8px #00000050;
+      flex-shrink: 0;
+    }
+    .global-color-btn:hover {
+      transform: scale(1.1);
+      border-color: #ffd966;
+    }
+    .global-color-btn.active {
+      border: 3px solid #ffd966;
+      box-shadow: 0 0 12px #ffd96680;
+    }
+    /* 右侧转盘区域 */
+    .wheel-section {
+      background: rgba(22, 32, 48, 0.75);
+      backdrop-filter: blur(12px);
+      border-radius: 48px;
+      padding: 30px 30px 40px;
+      box-shadow: 0 25px 40px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .wheel-wrapper {
+      position: relative;
+      width: 480px;
+      height: 480px;
+      margin: 0 auto;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 50%;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 0 8px #2a3748, 0 0 0 12px #1f2937;
+      transition: box-shadow 0.2s;
+    }
+    canvas:active {
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8), 0 0 0 8px #2a3748, 0 0 0 12px #1f2937;
+    }
+    .pointer {
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 54px;
+      filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.7));
+      z-index: 10;
+      pointer-events: none;
+      line-height: 1;
+      text-shadow: 0 0 10px #ffd966;
+      color: #ffd966;
+      transform-origin: center;
+    }
+    .spin-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 110px;
+      height: 110px;
+      background: radial-gradient(circle at 30% 30%, #ffd966, #e6b800);
+      border: none;
+      border-radius: 50%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 0 6px #1f2937, 0 0 0 10px #2a3748;
+      font-size: 26px;
+      font-weight: 800;
+      color: #1e1e1e;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      z-index: 20;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .spin-btn:active {
+      transform: translate(-50%, -50%) scale(0.92);
+      background: radial-gradient(circle at 30% 30%, #ffd966, #cc9900);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), 0 0 0 6px #1f2937, 0 0 0 10px #2a3748;
+    }
+    .spin-btn:disabled {
+      opacity: 0.7;
+      transform: translate(-50%, -50%) scale(1);
+      cursor: not-allowed;
+      background: #b0a070;
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.6), 0 0 0 6px #1f2937, 0 0 0 10px #2a3748;
+    }
+    .result-area {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffecb3;
+      text-shadow: 0 4px 12px #00000080;
+      min-height: 58px;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    .prize-highlight {
+      background: rgba(255, 215, 0, 0.15);
+      padding: 6px 18px;
+      border-radius: 60px;
+      border: 1px solid #ffd96655;
+      backdrop-filter: blur(4px);
+      display: inline-block;
+      max-width: 440px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .footer-note {
+      display: flex;
+      justify-content: center;
+      margin-top: 18px;
+      color: #7f8c9b;
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      gap: 16px;
+    }
+    .footer-note span {
+      background: #00000030;
+      padding: 4px 16px;
+      border-radius: 30px;
+      backdrop-filter: blur(4px);
+    }
+    @media (max-width: 1024px) {
+      .app {
+        flex-direction: column;
+        align-items: center;
+      }
+      .editor-panel {
+        width: 100%;
+        max-width: 600px;
+        max-height: none;
+      }
+      .wheel-wrapper {
+        width: 400px;
+        height: 400px;
+      }
+      body {
+        overflow: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- 左侧编辑面板 -->
+    <div class="editor-panel">
+      <h2>
+        ✏️ 自定义转盘
+        <small>桌面版</small>
+      </h2>
+      <div class="segment-list" id="segmentList">
+        <!-- 动态生成 -->
+      </div>
+      
+      <!-- 全局颜色快速设置 -->
+      <div class="global-color-row" id="globalColorRow">
+        <label>快速配色:</label>
+        <!-- 动态生成常用色块 -->
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn" id="addBtn" title="添加新奖品">➕ 添加</button>
+        <button class="btn" id="resetBtn" title="重置为默认">↺ 重置</button>
+      </div>
+      <button class="btn primary" id="applyBtn">✅ 应用并重绘转盘</button>
+    </div>
+
+    <!-- 右侧转盘 -->
+    <div class="wheel-section">
+      <div class="wheel-wrapper">
+        <canvas id="wheelCanvas" width="800" height="800"></canvas>
+        <div class="pointer">▼</div>
+        <button class="spin-btn" id="spinButton">转</button>
+      </div>
+      <div class="result-area" id="resultDisplay">
+        <span id="resultText">点击中间按钮开始</span>
+      </div>
+      <div class="footer-note">
+        <span id="segmentCountDisplay">🎯 8 个奖品</span>
+        <span>⚡ 公平随机</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function() {
+      // ---------- 默认奖品 (8个) ----------
+      const DEFAULT_SEGMENTS = [
+        { label: '🎁 优惠券', color: '#5DADE2' },
+        { label: '🍫 巧克力', color: '#F7DC6F' },
+        { label: '🧸 玩偶', color: '#E59866' },
+        { label: '💻 折扣码', color: '#82E0AA' },
+        { label: '📚 电子书', color: '#BB8FCE' },
+        { label: '🎟️ 电影票', color: '#F1948A' },
+        { label: '☕ 咖啡券', color: '#AAB7B8' },
+        { label: '🍀 谢谢参与', color: '#F5B041' }
+      ];
+
+      // 常用配色 (用于快速全局配色)
+      const PRESET_COLORS = [
+        '#5DADE2', '#F7DC6F', '#E59866', '#82E0AA',
+        '#BB8FCE', '#F1948A', '#AAB7B8', '#F5B041',
+        '#EC7063', '#48C9B0', '#F4D03F', '#D2B4DE'
+      ];
+
+      // 当前奖品数据
+      let segments = JSON.parse(JSON.stringify(DEFAULT_SEGMENTS));
+
+      // 动画 & 旋转状态
+      let currentRotation = Math.random() * Math.PI * 2;
+      let spinAnimation = null;
+      let isSpinning = false;
+
+      // 画布
+      const canvas = document.getElementById('wheelCanvas');
+      const ctx = canvas.getContext('2d');
+      const W = 800, H = 800;
+      const RADIUS = 340;
+      const CENTER_X = W / 2;
+      const CENTER_Y = H / 2;
+
+      // DOM 元素
+      const spinBtn = document.getElementById('spinButton');
+      const resultText = document.getElementById('resultText');
+      const segmentListEl = document.getElementById('segmentList');
+      const addBtn = document.getElementById('addBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const applyBtn = document.getElementById('applyBtn');
+      const segmentCountDisplay = document.getElementById('segmentCountDisplay');
+      const globalColorRow = document.getElementById('globalColorRow');
+
+      // ---------- 工具函数 ----------
+      function getSegmentCount() {
+        return segments.length;
+      }
+
+      function getAnglePerSeg() {
+        return (Math.PI * 2) / getSegmentCount();
+      }
+
+      // 随机明亮颜色
+      function randomColor() {
+        const hue = Math.floor(Math.random() * 360);
+        return `hsl(${hue}, 70%, 65%)`;
+      }
+
+      // 将HSL转换为Hex (用于颜色输入框)
+      function hslToHex(h, s, l) {
+        l /= 100;
+        const a = s * Math.min(l, 1 - l) / 100;
+        const f = n => {
+          const k = (n + h / 30) % 12;
+          const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+          return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return `#${f(0)}${f(8)}${f(4)}`;
+      }
+
+      // 确保颜色是hex格式 (用于color input)
+      function toHexColor(color) {
+        if (color.startsWith('#')) return color.slice(0, 7);
+        // 简单处理rgb/hsl 这里只做基本兼容
+        return '#5DADE2';
+      }
+
+      // ---------- 绘制转盘 ----------
+      function drawWheel(rotationRad = 0) {
+        ctx.clearRect(0, 0, W, H);
+        const count = getSegmentCount();
+        if (count === 0) {
+          ctx.beginPath();
+          ctx.arc(CENTER_X, CENTER_Y, RADIUS, 0, Math.PI * 2);
+          ctx.fillStyle = '#2a3748';
+          ctx.fill();
+          ctx.fillStyle = '#a0b0c0';
+          ctx.font = 'bold 40px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('请添加奖品', CENTER_X, CENTER_Y);
+          return;
+        }
+
+        const anglePerSeg = (Math.PI * 2) / count;
+
+        for (let i = 0; i < count; i++) {
+          const startAngle = i * anglePerSeg + rotationRad;
+          const endAngle = startAngle + anglePerSeg;
+
+          // 扇区
+          ctx.beginPath();
+          ctx.moveTo(CENTER_X, CENTER_Y);
+          ctx.arc(CENTER_X, CENTER_Y, RADIUS, startAngle, endAngle);
+          ctx.closePath();
+          ctx.fillStyle = segments[i].color || '#888888';
+          ctx.fill();
+
+          // 分割线
+          ctx.strokeStyle = '#ffffff30';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(CENTER_X, CENTER_Y);
+          ctx.arc(CENTER_X, CENTER_Y, RADIUS, startAngle, endAngle);
+          ctx.lineTo(CENTER_X, CENTER_Y);
+          ctx.stroke();
+
+          // 文字
+          ctx.save();
+          ctx.translate(CENTER_X, CENTER_Y);
+          ctx.rotate(startAngle + anglePerSeg / 2);
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const fontSize = Math.min(30, Math.max(16, 200 / Math.sqrt(count)));
+          ctx.font = `bold ${fontSize}px "Segoe UI", "Microsoft YaHei", sans-serif`;
+          ctx.shadowColor = '#00000060';
+          ctx.shadowBlur = 12;
+          ctx.shadowOffsetX = 2;
+          ctx.shadowOffsetY = 2;
+          ctx.fillStyle = '#1e1e1e';
+          const textRadius = RADIUS * 0.65;
+          let label = segments[i].label || '奖品';
+          if (label.length > 8) label = label.slice(0, 7) + '…';
+          ctx.fillText(label, textRadius, 0);
+          ctx.restore();
+        }
+
+        // 内圈装饰
+        ctx.beginPath();
+        ctx.arc(CENTER_X, CENTER_Y, RADIUS * 0.28, 0, Math.PI * 2);
+        ctx.fillStyle = '#1f2937dd';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#00000080';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.beginPath();
+        ctx.arc(CENTER_X, CENTER_Y, RADIUS * 0.14, 0, Math.PI * 2);
+        ctx.fillStyle = '#f1c40f';
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = '#f1c40f80';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // ---------- 根据旋转角度计算中奖索引 ----------
+      function getPrizeIndex(rotationRad) {
+        const count = getSegmentCount();
+        if (count === 0) return -1;
+        const anglePerSeg = (Math.PI * 2) / count;
+        const pointerAngle = -Math.PI / 2;
+        let angleFromStart = pointerAngle - rotationRad;
+        angleFromStart = ((angleFromStart % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        let idx = Math.floor(angleFromStart / anglePerSeg);
+        if (idx >= count) idx = count - 1;
+        if (idx < 0) idx = 0;
+        return idx;
+      }
+
+      function updateResultDisplay(rotationRad, isFinal = false) {
+        const count = getSegmentCount();
+        if (count === 0) {
+          resultText.textContent = '⚠️ 请先添加奖品';
+          return;
+        }
+        const idx = getPrizeIndex(rotationRad);
+        if (idx === -1) return;
+        const prize = segments[idx]?.label || '未知';
+        if (isFinal) {
+          resultText.innerHTML = `<span class="prize-highlight">🏆 恭喜获得：${prize}</span>`;
+        }
+      }
+
+      // ---------- 旋转动画 ----------
+      function spinWheel() {
+        if (isSpinning) return;
+        const count = getSegmentCount();
+        if (count === 0) {
+          alert('请至少添加一个奖品！');
+          return;
+        }
+        isSpinning = true;
+        spinBtn.disabled = true;
+        resultText.innerHTML = '🌀 转起来...';
+
+        const baseTurns = 5 + Math.floor(Math.random() * 5);
+        const randomAngle = Math.random() * Math.PI * 2;
+        const extraFine = (Math.random() - 0.5) * (getAnglePerSeg() * 0.5);
+
+        const startRotation = currentRotation;
+        const targetRotation = startRotation + (baseTurns * Math.PI * 2) + randomAngle + extraFine;
+
+        const duration = 3000 + Math.floor(Math.random() * 1000);
+        const startTime = performance.now();
+
+        function animate(now) {
+          const elapsed = now - startTime;
+          let progress = elapsed / duration;
+          if (progress > 1) progress = 1;
+
+          const easeOut = 1 - Math.pow(1 - progress, 3);
+          const current = startRotation + (targetRotation - startRotation) * easeOut;
+          currentRotation = current;
+          drawWheel(currentRotation);
+
+          if (progress < 1) {
+            spinAnimation = requestAnimationFrame(animate);
+          } else {
+            cancelAnimationFrame(spinAnimation);
+            spinAnimation = null;
+            isSpinning = false;
+            spinBtn.disabled = false;
+
+            currentRotation = targetRotation % (Math.PI * 2);
+            drawWheel(currentRotation);
+            updateResultDisplay(currentRotation, true);
+          }
+        }
+
+        spinAnimation = requestAnimationFrame(animate);
+      }
+
+      // ---------- 同步编辑器到 segments 数组 ----------
+      function syncSegmentsFromEditor() {
+        const items = segmentListEl.querySelectorAll('.segment-item');
+        const newSegments = [];
+        items.forEach(item => {
+          const input = item.querySelector('input[type="text"]');
+          const colorDiv = item.querySelector('.color-badge');
+          const label = input.value.trim() || '奖品';
+          const color = colorDiv.dataset.color || '#888888';
+          newSegments.push({ label, color });
+        });
+        if (newSegments.length === 0) {
+          newSegments.push({ label: '🎁 奖品', color: '#5DADE2' });
+        }
+        segments = newSegments;
+        segmentCountDisplay.textContent = `🎯 ${segments.length} 个奖品`;
+        currentRotation = Math.random() * Math.PI * 2;
+        drawWheel(currentRotation);
+        resultText.textContent = '点击中间按钮开始';
+      }
+
+      // ---------- 渲染编辑面板 ----------
+      function renderEditor() {
+        segmentListEl.innerHTML = '';
+        segments.forEach((seg, index) => {
+          const item = document.createElement('div');
+          item.className = 'segment-item';
+          item.dataset.index = index;
+
+          // 颜色块 + 隐藏的color input
+          const colorWrapper = document.createElement('div');
+          colorWrapper.style.position = 'relative';
+          colorWrapper.style.width = '28px';
+          colorWrapper.style.height = '28px';
+          colorWrapper.style.flexShrink = '0';
+
+          const colorBadge = document.createElement('div');
+          colorBadge.className = 'color-badge';
+          colorBadge.style.backgroundColor = seg.color;
+          colorBadge.dataset.color = seg.color;
+
+          const colorInput = document.createElement('input');
+          colorInput.type = 'color';
+          colorInput.className = 'color-input-hidden';
+          colorInput.value = toHexColor(seg.color);
+          colorInput.addEventListener('input', (e) => {
+            const newColor = e.target.value;
+            colorBadge.style.backgroundColor = newColor;
+            colorBadge.dataset.color = newColor;
+          });
+
+          colorWrapper.appendChild(colorBadge);
+          colorWrapper.appendChild(colorInput);
+
+          // 文本输入
+          const textInput = document.createElement('input');
+          textInput.type = 'text';
+          textInput.value = seg.label;
+          textInput.placeholder = '输入奖品名称';
+          textInput.maxLength = 20;
+
+          // 删除按钮
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'remove-btn';
+          removeBtn.innerHTML = '✕';
+          removeBtn.title = '删除此奖品';
+          removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (segments.length <= 1) {
+              alert('至少保留一个奖品');
+              return;
+            }
+            // 从编辑器收集现有数据（排除当前项）
+            const allItems = Array.from(segmentListEl.querySelectorAll('.segment-item'));
+            const newSegs = [];
+            allItems.forEach((it) => {
+              if (it === item) return;
+              const inp = it.querySelector('input[type="text"]');
+              const cDiv = it.querySelector('.color-badge');
+              newSegs.push({
+                label: inp.value.trim() || '奖品',
+                color: cDiv.dataset.color || '#888888'
+              });
+            });
+            if (newSegs.length === 0) {
+              newSegs.push({ label: '🎁 奖品', color: '#5DADE2' });
+            }
+            segments = newSegs;
+            renderEditor();
+            segmentCountDisplay.textContent = `🎯 ${segments.length} 个奖品`;
+            currentRotation = Math.random() * Math.PI * 2;
+            drawWheel(currentRotation);
+            resultText.textContent = '点击中间按钮开始';
+          });
+
+          item.appendChild(colorWrapper);
+          item.appendChild(textInput);
+          item.appendChild(removeBtn);
+          segmentListEl.appendChild(item);
+        });
+      }
+
+      // ---------- 全局配色功能 ----------
+      function renderGlobalColors() {
+        // 清空除了label之外的元素
+        const label = globalColorRow.querySelector('label');
+        globalColorRow.innerHTML = '';
+        globalColorRow.appendChild(label);
+
+        PRESET_COLORS.forEach(color => {
+          const btn = document.createElement('div');
+          btn.className = 'global-color-btn';
+          btn.style.backgroundColor = color;
+          btn.title = `应用此配色: ${color}`;
+          btn.addEventListener('click', () => {
+            if (isSpinning) {
+              alert('转盘正在旋转，请稍后再试');
+              return;
+            }
+            // 将当前所有奖品的颜色替换为此颜色（或生成渐变色系？简单替换为同一颜色会失去区分度，改为生成同色系不同明度的颜色）
+            const baseColor = color;
+            // 生成一组同色系但明度/饱和度略有变化的颜色
+            const count = segments.length;
+            if (count === 0) return;
+            
+            // 解析基础颜色为HSL
+            const hex = baseColor.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16) / 255;
+            const g = parseInt(hex.substring(2, 4), 16) / 255;
+            const b = parseInt(hex.substring(4, 6), 16) / 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) {
+              h = s = 0;
+            } else {
+              const d = max - min;
+              s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+              switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+              }
+            }
+            h = Math.round(h * 360);
+            s = Math.round(s * 100);
+            l = Math.round(l * 100);
+
+            // 为每个奖品分配一个亮度/饱和度变体
+            const newSegments = segments.map((seg, i) => {
+              const lightness = Math.max(35, Math.min(80, 40 + (i * 8) % 40));
+              const saturation = Math.max(50, Math.min(90, s + (i * 5) % 30));
+              const hue = (h + i * 15) % 360; // 色相轻微偏移
+              return {
+                ...seg,
+                color: `hsl(${hue}, ${saturation}%, ${lightness}%)`
+              };
+            });
+            segments = newSegments;
+            renderEditor();
+            // 保留当前角度或随机
+            currentRotation = Math.random() * Math.PI * 2;
+            drawWheel(currentRotation);
+            resultText.textContent = '点击中间按钮开始';
+          });
+          globalColorRow.appendChild(btn);
+        });
+      }
+
+      // ---------- 应用更改 ----------
+      function applyChanges() {
+        if (isSpinning) {
+          alert('转盘正在旋转，请稍后再试');
+          return;
+        }
+        syncSegmentsFromEditor();
+      }
+
+      // ---------- 添加新奖品 ----------
+      function addSegment() {
+        if (isSpinning) return;
+        const items = segmentListEl.querySelectorAll('.segment-item');
+        const newSegments = [];
+        items.forEach(item => {
+          const input = item.querySelector('input[type="text"]');
+          const colorDiv = item.querySelector('.color-badge');
+          newSegments.push({
+            label: input.value.trim() || '奖品',
+            color: colorDiv.dataset.color || '#888888'
+          });
+        });
+        newSegments.push({
+          label: `🎁 奖品 ${newSegments.length + 1}`,
+          color: randomColor()
+        });
+        segments = newSegments;
+        renderEditor();
+        segmentCountDisplay.textContent = `🎯 ${segments.length} 个奖品`;
+        currentRotation = Math.random() * Math.PI * 2;
+        drawWheel(currentRotation);
+        resultText.textContent = '点击中间按钮开始';
+      }
+
+      // ---------- 重置为默认 ----------
+      function resetToDefault() {
+        if (isSpinning) return;
+        if (!confirm('确定重置为默认奖品吗？所有自定义将丢失。')) return;
+        segments = JSON.parse(JSON.stringify(DEFAULT_SEGMENTS));
+        renderEditor();
+        segmentCountDisplay.textContent = `🎯 ${segments.length} 个奖品`;
+        currentRotation = Math.random() * Math.PI * 2;
+        drawWheel(currentRotation);
+        resultText.textContent = '点击中间按钮开始';
+      }
+
+      // ---------- 初始化 ----------
+      function init() {
+        renderEditor();
+        renderGlobalColors();
+        segmentCountDisplay.textContent = `🎯 ${segments.length} 个奖品`;
+        currentRotation = Math.random() * Math.PI * 2;
+        drawWheel(currentRotation);
+        
+        spinBtn.addEventListener('click', spinWheel);
+        addBtn.addEventListener('click', addSegment);
+        resetBtn.addEventListener('click', resetToDefault);
+        applyBtn.addEventListener('click', applyChanges);
+
+        // 回车键快速应用
+        segmentListEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+            e.preventDefault();
+            applyChanges();
+          }
+        });
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
